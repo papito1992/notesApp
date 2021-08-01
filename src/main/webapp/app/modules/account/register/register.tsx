@@ -7,7 +7,7 @@ import PasswordStrengthBar from 'app/shared/layout/password/password-strength-ba
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { handleRegister, reset } from './register.reducer';
 
-export const RegisterPage = () => {
+export const RegisterPage = props => {
   const [password, setPassword] = useState('');
   const dispatch = useAppDispatch();
 
@@ -20,6 +20,7 @@ export const RegisterPage = () => {
 
   const handleValidSubmit = ({ username, email, firstPassword }) => {
     dispatch(handleRegister({ login: username, email, password: firstPassword, langKey: 'en' }));
+    props.history.push('/login');
   };
 
   const updatePassword = event => setPassword(event.target.value);

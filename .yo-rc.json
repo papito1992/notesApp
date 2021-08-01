@@ -42,6 +42,8 @@
     "jwtSecretKey": "ZTVkMmRkMDRmNzRiZWY3M2VjNGE5ODQ5YTU0Y2Q4Y2VlYjM4NWE2OTg1MGJhY2EyMzY1M2I0MDZmMDBmYjdjYmQyNGUwNjYzMDkzZjM3NjNlNTU4ZGI1NzdkMWE0ZWRlMzY3NjM5MWE3ZDQxOWM4MjU1NmVlNWU3ZTE4ZTUyZmY=",
     "devServerPort": 9060,
     "clientPackageManager": "npm",
-    "languages": ["en", "fr"]
+    "languages": ["en", "fr"],
+    "lastLiquibaseTimestamp": 1627584273000,
+    "entities": ["Note"]
   }
 }

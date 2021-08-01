@@ -165,6 +165,14 @@ public class ExceptionTranslator implements ProblemHandling, SecurityAdviceTrait
         return create(ex, problem, request);
     }
 
+    @ExceptionHandler
+    public ResponseEntity<Problem> handleNoteExpirationDateException(
+        com.mycompany.myapp.service.NoteExpiredException ex,
+        NativeWebRequest request
+    ) {
+        return create(new NoteExpirationDateException(), request);
+    }
+
     @Override
     public ProblemBuilder prepare(final Throwable throwable, final StatusType status, final URI type) {
         Collection<String> activeProfiles = Arrays.asList(env.getActiveProfiles());
