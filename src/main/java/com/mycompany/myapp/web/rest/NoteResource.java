@@ -61,7 +61,7 @@ public class NoteResource {
             throw new BadRequestAlertException("A new note cannot already have an ID", ENTITY_NAME, "idexists");
         }
         if (!note.getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse(""))) {
-            return new ResponseEntity<>("error.http.403", HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>("Not authorized for current user!", HttpStatus.FORBIDDEN);
         }
         Note result = noteService.save(note);
         return ResponseEntity

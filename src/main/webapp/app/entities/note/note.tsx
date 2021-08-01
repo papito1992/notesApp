@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link, RouteComponentProps } from 'react-router-dom';
-import { Button, Col, Row, Table } from 'reactstrap';
-import { Translate, TextFormat } from 'react-jhipster';
+import { Button, Table } from 'reactstrap';
+import { TextFormat } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-
-import { getUsers, getUser } from 'app/modules/administration/user-management/user-management.reducer';
 import { getEntities } from './note.reducer';
-import { INote } from 'app/shared/model/note.model';
-import { APP_DATE_FORMAT, APP_LOCAL_DATE_FORMAT } from 'app/config/constants';
+import { APP_DATE_FORMAT } from 'app/config/constants';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 export const Note = (props: RouteComponentProps<{ url: string }>) => {
@@ -26,7 +23,6 @@ export const Note = (props: RouteComponentProps<{ url: string }>) => {
   };
 
   const { match } = props;
-  console.log(account);
   return (
     <div>
       <h2 id="note-heading" data-cy="NoteHeading">

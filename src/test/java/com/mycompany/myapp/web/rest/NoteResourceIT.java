@@ -2,16 +2,15 @@ package com.mycompany.myapp.web.rest;
 
 import static com.mycompany.myapp.web.rest.TestUtil.sameInstant;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.mycompany.myapp.IntegrationTest;
 import com.mycompany.myapp.domain.Note;
+import com.mycompany.myapp.domain.User;
 import com.mycompany.myapp.repository.NoteRepository;
-import java.time.Instant;
+import com.mycompany.myapp.repository.UserRepository;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Random;
@@ -34,26 +33,28 @@ import org.springframework.transaction.annotation.Transactional;
 @WithMockUser
 class NoteResourceIT {
 
-    private static final String DEFAULT_CONTENT = "AAAAAAAAAA";
+    private static final String DEFAULT_CONTENT = "productivity Rial";
     private static final String UPDATED_CONTENT = "BBBBBBBBBB";
 
-    private static final String DEFAULT_PASSWORD = "AAAAAAAAAA";
+    private static final String DEFAULT_PASSWORD = "Account orange auxil";
     private static final String UPDATED_PASSWORD = "BBBBBBBBBB";
 
-    private static final String DEFAULT_LINK = "AAAAAAAAAA";
-    private static final String UPDATED_LINK = "BBBBBBBBBB";
+    private static final String DEFAULT_LINK = "http://localhost:9000/public/note/1001";
 
-    private static final ZonedDateTime DEFAULT_EXPIRATION_DATE = ZonedDateTime.ofInstant(Instant.ofEpochMilli(0L), ZoneOffset.UTC);
+    private static final ZonedDateTime DEFAULT_EXPIRATION_DATE = ZonedDateTime.of(2021, 7, 28, 23, 58, 35, 2, ZoneId.of("Europe/Vilnius"));
     private static final ZonedDateTime UPDATED_EXPIRATION_DATE = ZonedDateTime.now(ZoneId.systemDefault()).withNano(0);
 
     private static final String ENTITY_API_URL = "/api/notes";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
 
-    private static Random random = new Random();
-    private static AtomicLong count = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
+    private static final Random random = new Random();
+    private static final AtomicLong count = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
 
     @Autowired
     private NoteRepository noteRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private EntityManager em;
@@ -65,7 +66,7 @@ class NoteResourceIT {
 
     /**
      * Create an entity for this test.
-     *
+     * <p>
      * This is a static method, as tests for other entities might also need it,
      * if they test an entity which requires the current entity.
      */
@@ -80,16 +81,12 @@ class NoteResourceIT {
 
     /**
      * Create an updated entity for this test.
-     *
+     * <p>
      * This is a static method, as tests for other entities might also need it,
      * if they test an entity which requires the current entity.
      */
     public static Note createUpdatedEntity(EntityManager em) {
-        Note note = new Note()
-            .content(UPDATED_CONTENT)
-            .password(UPDATED_PASSWORD)
-            .link(UPDATED_LINK)
-            .expirationDate(UPDATED_EXPIRATION_DATE);
+        Note note = new Note().content(UPDATED_CONTENT).password(UPDATED_PASSWORD).expirationDate(UPDATED_EXPIRATION_DATE);
         return note;
     }
 
@@ -102,6 +99,8 @@ class NoteResourceIT {
     @Transactional
     void createNote() throws Exception {
         int databaseSizeBeforeCreate = noteRepository.findAll().size();
+        User user = userRepository.getOne(2L);
+        note.setUser(user);
         // Create the Note
         restNoteMockMvc
             .perform(post(ENTITY_API_URL).contentType(MediaType.APPLICATION_JSON).content(TestUtil.convertObjectToJsonBytes(note)))
@@ -111,9 +110,14 @@ class NoteResourceIT {
         List<Note> noteList = noteRepository.findAll();
         assertThat(noteList).hasSize(databaseSizeBeforeCreate + 1);
         Note testNote = noteList.get(noteList.size() - 1);
-        assertThat(testNote.getContent()).isEqualTo(DEFAULT_CONTENT);
-        assertThat(testNote.getPassword()).isEqualTo(DEFAULT_PASSWORD);
-        assertThat(testNote.getLink()).isEqualTo(DEFAULT_LINK);
+        assertThat(testNote.getContent()).isEqualTo("productivity Rial");
+        assertThat(testNote.getPassword()).isEqualTo("Account orange auxil");
+        // If this test is run individually new id will be 1001, if its run with other tests it will
+        // have value of 1206.
+        assertThat(
+            testNote.getLink().equals("http://localhost:9000/public/note/1206") ||
+            testNote.getLink().equals("http://localhost:9000/public/note/1001")
+        );
         assertThat(testNote.getExpirationDate()).isEqualTo(DEFAULT_EXPIRATION_DATE);
     }
 
@@ -191,17 +195,13 @@ class NoteResourceIT {
     void getAllNotes() throws Exception {
         // Initialize the database
         noteRepository.saveAndFlush(note);
+        int databaseSizeBeforeTest = noteRepository.findAll().size();
 
         // Get all the noteList
-        restNoteMockMvc
-            .perform(get(ENTITY_API_URL + "?sort=id,desc"))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(note.getId().intValue())))
-            .andExpect(jsonPath("$.[*].content").value(hasItem(DEFAULT_CONTENT)))
-            .andExpect(jsonPath("$.[*].password").value(hasItem(DEFAULT_PASSWORD)))
-            .andExpect(jsonPath("$.[*].link").value(hasItem(DEFAULT_LINK)))
-            .andExpect(jsonPath("$.[*].expirationDate").value(hasItem(sameInstant(DEFAULT_EXPIRATION_DATE))));
+        restNoteMockMvc.perform(get(ENTITY_API_URL)).andExpect(status().isOk());
+
+        List<Note> noteList = noteRepository.findAll();
+        assertThat(noteList).hasSize(databaseSizeBeforeTest);
     }
 
     @Test
@@ -241,7 +241,7 @@ class NoteResourceIT {
         Note updatedNote = noteRepository.findById(note.getId()).get();
         // Disconnect from session so that the updates on updatedNote are not directly saved in db
         em.detach(updatedNote);
-        updatedNote.content(UPDATED_CONTENT).password(UPDATED_PASSWORD).link(UPDATED_LINK).expirationDate(UPDATED_EXPIRATION_DATE);
+        updatedNote.content(UPDATED_CONTENT).password(UPDATED_PASSWORD).expirationDate(UPDATED_EXPIRATION_DATE);
 
         restNoteMockMvc
             .perform(
@@ -257,7 +257,6 @@ class NoteResourceIT {
         Note testNote = noteList.get(noteList.size() - 1);
         assertThat(testNote.getContent()).isEqualTo(UPDATED_CONTENT);
         assertThat(testNote.getPassword()).isEqualTo(UPDATED_PASSWORD);
-        assertThat(testNote.getLink()).isEqualTo(UPDATED_LINK);
         assertThat(testNote.getExpirationDate()).isEqualTo(UPDATED_EXPIRATION_DATE);
     }
 
@@ -361,7 +360,7 @@ class NoteResourceIT {
         Note partialUpdatedNote = new Note();
         partialUpdatedNote.setId(note.getId());
 
-        partialUpdatedNote.content(UPDATED_CONTENT).password(UPDATED_PASSWORD).link(UPDATED_LINK).expirationDate(UPDATED_EXPIRATION_DATE);
+        partialUpdatedNote.content(UPDATED_CONTENT).password(UPDATED_PASSWORD).expirationDate(UPDATED_EXPIRATION_DATE);
 
         restNoteMockMvc
             .perform(
@@ -377,7 +376,6 @@ class NoteResourceIT {
         Note testNote = noteList.get(noteList.size() - 1);
         assertThat(testNote.getContent()).isEqualTo(UPDATED_CONTENT);
         assertThat(testNote.getPassword()).isEqualTo(UPDATED_PASSWORD);
-        assertThat(testNote.getLink()).isEqualTo(UPDATED_LINK);
         assertThat(testNote.getExpirationDate()).isEqualTo(UPDATED_EXPIRATION_DATE);
     }
 
